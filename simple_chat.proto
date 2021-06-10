@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+option go_package = "github.com/t-kinomura/grpc-chat";
+
+package chat;
+
+service Chat {
+  rpc SimpleChat(stream Message) returns (stream Message) {}
+}
+
+message Message {
+  string message = 1;
+}
+
