@@ -34,27 +34,16 @@ func (c *chatServer) SimpleChat(stream chat.Chat_SimpleChatServer) error {
 	for {
 		in, err := stream.Recv()
 		if err == io.EOF {
+			c.messages = nil
 			return nil
 		}
 		if err != nil {
 			return err
 		}
 
-		//c.mu.Lock()
-		//c.routeNotes[key] = append(c.routeNotes[key], in)
-		//// Note: this copy prevents blocking other clients while serving this one.
-		//// We don't need to do a deep copy, because elements in the slice are
-		//// insert-only and never modified.
-		//rn := make([]*chat.Message, len(c.routeNotes[key]))
-		//copy(rn, c.routeNotes[key])
-		//c.mu.Unlock()
-
 		c.messages = append(c.messages, in)
-
-		for _, message := range c.messages {
-			if err := stream.Send(message); err != nil {
-				return err
-			}
+		if err := stream.Send(c.messages[len(c.messages)-1]); err != nil {
+			return err
 		}
 	}
 }
