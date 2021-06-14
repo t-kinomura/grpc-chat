@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 
 	chat "github.com/t-kinomura/grpc-chat"
 )
@@ -31,6 +32,7 @@ type chatServer struct {
 }
 
 func (c *chatServer) SimpleChat(stream chat.Chat_SimpleChatServer) error {
+	go SendChat(stream, c)
 	for {
 		in, err := stream.Recv()
 		if err == io.EOF {
@@ -42,8 +44,20 @@ func (c *chatServer) SimpleChat(stream chat.Chat_SimpleChatServer) error {
 		}
 
 		c.messages = append(c.messages, in)
-		if err := stream.Send(c.messages[len(c.messages)-1]); err != nil {
-			return err
+		fmt.Printf("Recieved Message: %s\n", c.messages[len(c.messages) - 1])
+	}
+}
+
+func SendChat(stream chat.Chat_SimpleChatServer, c *chatServer) error {
+	currentCount := 0
+	for {
+		if currentCount < len(c.messages) {
+			if err := stream.Send(c.messages[currentCount]); err != nil {
+				return err
+			}
+
+			time.Sleep(100 * time.Microsecond)
+			currentCount++
 		}
 	}
 }
