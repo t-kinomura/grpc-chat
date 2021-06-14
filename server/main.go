@@ -44,7 +44,7 @@ func (c *chatServer) SimpleChat(stream chat.Chat_SimpleChatServer) error {
 		}
 
 		c.messages = append(c.messages, in)
-		fmt.Printf("Recieved Message: %s\n", c.messages[len(c.messages) - 1])
+		fmt.Printf("Recieved Message: %s\n", c.messages[len(c.messages)-1])
 	}
 }
 
