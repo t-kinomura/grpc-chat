@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	chat "github.com/t-kinomura/grpc-chat"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/examples/data"
@@ -10,9 +11,6 @@ import (
 	"log"
 	"net"
 	"sync"
-	"time"
-
-	chat "github.com/t-kinomura/grpc-chat"
 )
 
 var (
@@ -26,11 +24,13 @@ type chatServer struct {
 	chat.UnimplementedChatServer
 
 	mu       sync.Mutex
+	cond     *sync.Cond
 	messages []*chat.Message
 }
 
 func (c *chatServer) SimpleChat(stream chat.Chat_SimpleChatServer) error {
-	go SendChat(stream, c)
+	go SendChat(stream, c, c.cond)
+
 	for {
 		in, err := stream.Recv()
 		if err == io.EOF {
@@ -41,27 +41,39 @@ func (c *chatServer) SimpleChat(stream chat.Chat_SimpleChatServer) error {
 			return err
 		}
 
+		c.cond.L.Lock()
 		c.messages = append(c.messages, in)
+		c.cond.L.Unlock()
+		c.cond.Broadcast()
 		fmt.Printf("Recieved Message: %s\n", c.messages[len(c.messages)-1])
 	}
 }
 
-func SendChat(stream chat.Chat_SimpleChatServer, c *chatServer) error {
-	currentCount := 0
-	for {
-		if currentCount < len(c.messages) {
-			if err := stream.Send(c.messages[currentCount]); err != nil {
-				return err
-			}
-
-			time.Sleep(100 * time.Microsecond)
-			currentCount++
+func SendChat(stream chat.Chat_SimpleChatServer, c *chatServer, cond *sync.Cond) error {
+	// 参加したときに過去のメッセージをすべて受け取る.
+	for _, message := range c.messages {
+		if err := stream.Send(message); err != nil {
+			return err
 		}
 	}
+	cond.L.Lock()
+	for {
+		cond.Wait()
+		if err := stream.Send(c.messages[len(c.messages)-1]); err != nil {
+			return err
+		}
+	}
+	cond.L.Unlock()
+
+	return nil
 }
 
 func newServer() *chatServer {
-	s := &chatServer{messages: make([]*chat.Message, 0)}
+	cond := sync.NewCond(&sync.Mutex{})
+	s := &chatServer{
+		messages: make([]*chat.Message, 0),
+		cond:     cond,
+	}
 	return s
 }
 
