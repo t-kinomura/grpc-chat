@@ -25,9 +25,7 @@ var (
 type chatServer struct {
 	chat.UnimplementedChatServer
 
-	mu sync.Mutex // protects routeNotes
-	// TODO
-	//routeNotes map[string][]*chat.Message
+	mu       sync.Mutex
 	messages []*chat.Message
 }
 
