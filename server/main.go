@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/examples/data"
+	"google.golang.org/grpc/reflection"
 	"io"
 	"log"
 	"net"
@@ -106,6 +107,9 @@ func main() {
 	// サービスの実装をgRPCサーバに登録.
 	// grpc.pb.go
 	chat.RegisterChatServer(grpcServer, newServer())
+
+	// reflection serviceをgRPCサーバーに登録.
+	reflection.Register(grpcServer)
 
 	// サーバーのServe()をポートの詳細とともに呼び出す.
 	// プロセスがキルされるかStop()が呼ばれるまでブロッキング待機.
